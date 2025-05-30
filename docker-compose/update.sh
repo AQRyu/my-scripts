@@ -1,30 +1,69 @@
 #!/bin/bash
 
+set -euo pipefail
+
+# Define default values and constants
 COMPOSE_FILE="docker-compose.yml"
 PROJECT_NAME=$(basename "$(pwd)")
+DOCKER_COMPOSE_COMMAND="docker-compose"
+
+# Check if docker-compose is installed
+if ! command -v "$DOCKER_COMPOSE_COMMAND" &> /dev/null; then
+  echo "Error: docker-compose is not installed. Please install it and try again."
+  exit 1
+fi
 
 pull_latest_images() {
-  docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" pull
+  echo "Pulling latest images for project '$PROJECT_NAME' using compose file '$COMPOSE_FILE'..."
+  # Check if the compose file exists
+  if [[ ! -f "$COMPOSE_FILE" ]]; then
+    echo "Error: Docker Compose file '$COMPOSE_FILE' not found."
+    exit 1
+  fi
+
+  # Pull the latest images
+  if ! "$DOCKER_COMPOSE_COMMAND" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" pull; then
+    echo "Error: Failed to pull latest images."
+    exit 1
+  fi
+  echo "Successfully pulled latest images."
 }
 
 restart_containers() {
-  RUNNING_CONTAINERS=$(docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" ps -q)
+  echo "Restarting containers for project '$PROJECT_NAME' using compose file '$COMPOSE_FILE'..."
+  # Check if the compose file exists
+  if [[ ! -f "$COMPOSE_FILE" ]]; then
+    echo "Error: Docker Compose file '$COMPOSE_FILE' not found."
+    exit 1
+  fi
+
+  # Check if there are running containers
+  RUNNING_CONTAINERS=$("$DOCKER_COMPOSE_COMMAND" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" ps -q 2>/dev/null)
   if [[ -n "$RUNNING_CONTAINERS" ]]; then
-    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d --remove-orphans
+    echo "Running containers found. Restarting..."
+    if ! "$DOCKER_COMPOSE_COMMAND" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d --remove-orphans; then
+      echo "Error: Failed to restart containers."
+      exit 1
+    fi
   else
     echo "No running containers found. Starting services..."
-    docker-compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d
+    if ! "$DOCKER_COMPOSE_COMMAND" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d; then
+      echo "Error: Failed to start services."
+      exit 1
+    fi
   fi
+  echo "Successfully restarted containers."
 }
 
 usage() {
   echo "Usage: $0 [options]"
   echo "Options:"
-  echo "  -p <project_name>  Specify the Docker Compose project name"
-  echo "  -f <compose_file>  Specify the path to the docker-compose.yml file"
+  echo "  -p <project_name>  Specify the Docker Compose project name (default: $(basename "$(pwd)"))"
+  echo "  -f <compose_file>  Specify the path to the docker-compose.yml file (default: docker-compose.yml)"
   echo "  -h                 Display this help message"
 }
 
+# Parse command-line arguments
 while getopts ":p:f:h" opt; do
   case $opt in
   p)
@@ -38,18 +77,35 @@ while getopts ":p:f:h" opt; do
     exit 0
     ;;
   \:)
-    echo "Option -$OPTARG requires an argument."
+    echo "Error: Option -$OPTARG requires an argument." >&2
     usage
     exit 1
     ;;
   ?)
-    echo "Invalid option: -$OPTARG"
+    echo "Error: Invalid option: -$OPTARG" >&2
     usage
     exit 1
     ;;
   esac
 done
 
+# Shift off the options to get to any remaining arguments
+shift $((OPTIND - 1))
+
+# Check if there are any extraneous arguments
+if [[ $# -gt 0 ]]; then
+  echo "Error: Too many arguments." >&2
+  usage
+  exit 1
+fi
+
+# Sanity check for project name
+if [[ -z "$PROJECT_NAME" ]]; then
+  echo "Error: Project name cannot be empty."
+  exit 1
+fi
+
+# Execute the main logic
 pull_latest_images
 restart_containers
 
