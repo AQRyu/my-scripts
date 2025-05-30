@@ -6,11 +6,40 @@ set -euo pipefail
 COMPOSE_FILE="docker-compose.yml"
 PROJECT_NAME=$(basename "$(pwd)")
 DOCKER_COMPOSE_COMMAND="docker-compose"
+DOCKER_COMMAND="docker" # Define docker command
 
-# Check if docker-compose is installed
-if ! command -v "$DOCKER_COMPOSE_COMMAND" &> /dev/null; then
-  echo "Error: docker-compose is not installed. Please install it and try again."
+# Function to display installation instructions
+show_installation_instructions() {
+  echo "Please install Docker Compose using one of the methods below:"
+  echo
+  echo "1. Using pip (if you have Python and pip installed):"
+  echo "   pip install docker-compose"
+  echo
+  echo "2. On Linux (using apt - Debian/Ubuntu):"
+  echo "   sudo apt-get update"
+  echo "   sudo apt-get install docker-compose"
+  echo
+  echo "3. On macOS (using Homebrew):"
+  echo "   brew install docker-compose"
+  echo
+  echo "Alternatively, if you have Docker installed, you can use the 'docker compose' command (Docker Compose V2)."
+  echo
+  echo "Refer to the Docker Compose documentation for more detailed instructions:"
+  echo "https://docs.docker.com/compose/install/"
+}
+
+# Check if docker-compose or docker compose is installed
+if ! command -v "$DOCKER_COMPOSE_COMMAND" &> /dev/null && ! "$DOCKER_COMMAND" compose version &> /dev/null; then
+  echo "Error: Neither docker-compose nor docker compose (Docker Compose V2) is installed."
+  show_installation_instructions
   exit 1
+fi
+
+# Determine which command to use
+if command -v "$DOCKER_COMPOSE_COMMAND" &> /dev/null; then
+  DOCKER_COMPOSE_COMMAND="$DOCKER_COMPOSE_COMMAND"
+elif "$DOCKER_COMMAND" compose version &> /dev/null; then
+  DOCKER_COMPOSE_COMMAND="$DOCKER_COMMAND compose"
 fi
 
 pull_latest_images() {
