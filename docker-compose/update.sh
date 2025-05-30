@@ -51,11 +51,7 @@ pull_latest_images() {
   fi
 
   # Pull the latest images
-  if ! "$DOCKER_COMPOSE_COMMAND" -f "$COMPOSE_FILE" -p "$PROJECT_NAME" pull; then
-    echo "Error: Failed to pull latest images."
-    exit 1
-  fi
-  echo "Successfully pulled latest images."
+  $DOCKER_COMPOSE_COMMAND -f "$COMPOSE_FILE" -p "$PROJECT_NAME" pull
 }
 
 restart_containers() {
