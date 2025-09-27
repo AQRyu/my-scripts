@@ -40,8 +40,8 @@ fi
 
 declare -A OTHER_SDK_COPY_MAP=(
   ["maven"]="maven:3.9.10"
-  ["mvnd"]="mvnd:1.0.2"
-  ["gradle"]="gradle:8.14"
+  ["mvnd"]="mvnd:1.0.3"
+  ["gradle"]="gradle:9.1.0"
 )
 
 for sdk_name_short in "${!OTHER_SDK_COPY_MAP[@]}"; do
